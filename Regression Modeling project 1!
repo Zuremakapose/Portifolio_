@@ -1,0 +1,335 @@
+1  Introduction
+Context: The bike-sharing industry has seen exponential growth, valued at $2.8 billion in 2023, fueled by increasing demand for sustainable, convenient, and healthy modes of transportation. In light of this, the Cook County Planning and Development Department, overseeing the Chicago metropolitan area, seeks to leverage data analytics to predict daily bike rental volumes and understand the underlying factors driving demand.
+Objective: The goal of this project is to develop a predictive model capable of forecasting daily bike rentals in Chicago, utilizing a dataset that captures various environmental and temporal factors. This model aims to provide actionable insights to support strategic planning and operational decision-making for bike-sharing services.
+Approach: A comprehensive data analysis and modeling approach is adopted, involving:
+Detailed exploratory data analysis (EDA) to uncover trends, patterns, and anomalies.
+Data preprocessing and feature engineering to prepare the dataset for modeling.
+Training and evaluating multiple regression models to identify the most effective predictor of bike rental demand.
+Models Considered: The analysis explores four machine learning algorithms permitted by the assignment: OLS Linear Regression, Lasso Regression, K-Nearest Neighbors, and Decision Tree Regressor, culminating in the selection of an optimal model for deployment.
+Package and Dataset Imports: This section is dedicated to setting the foundation for the project by:
+Importing essential libraries for data manipulation (Pandas, NumPy), data visualization (Matplotlib, Seaborn), and machine learning (scikit-learn).
+Configuring Pandas display settings to enhance data frame visualization capabilities.
+Loading the Chicago bike-sharing dataset, which includes both training and testing sets, thus preparing for an in-depth exploratory data analysis (EDA) and preprocessing.
+Significance: These initial steps are crucial for ensuring that all necessary tools and datasets are readily available and properly configured for effective analysis and model development.
+
+# Importing necessary libraries for data manipulation, visualization, and modeling
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression, Lasso
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import matplotlib.pyplot as plt
+import seaborn as sns
+​
+​
+# Setting display options for pandas dataframes
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
+​
+# Loading the training dataset
+df_train = pd.read_excel('chicago_training_data.xlsx')
+​
+# Loading the test dataset for Kaggle submission
+df_test = pd.read_excel('chicago_test_data.xlsx')
+​
+# Checking the first few rows of the training dataset
+df_train.head()
+​
+ID	DateHour	Temperature(F)	Humidity(%)	Wind speed (mph)	Visibility(miles)	DewPointTemperature(F)	Rainfall(in)	Snowfall(in)	SolarRadiation(MJ/m2)	Holiday	FunctioningDay	RENTALS
+0	mb_1039	2023-10-14 05:59:54.810000	52	81	0.4	2.9	46.4	0.0	0.0	0.00	No	Yes	519
+1	mb_1330	2023-10-26 08:59:53.355000	51	53	2.2	NaN	35.2	0.0	0.0	1.01	No	Yes	1251
+2	mb_551	2023-09-23 21:59:57.250000	56	49	2.5	3.4	38.8	0.0	0.0	0.00	No	Yes	1685
+3	mb_2103	2023-12-19 14:00:00	69	32	9.8	12.4	38.7	0.0	0.0	2.36	No	No	0
+4	mb_1430	2023-10-30 12:59:52.855000	53	20	2.9	10.8	12.9	0.0	0.0	1.96	No	Yes	814
+
+# Checking the first few rows of the test dataset
+df_test.head()
+ID	DateHour	Temperature(F)	Humidity(%)	Wind speed (mph)	Visibility(miles)	DewPointTemperature(F)	Rainfall(in)	Snowfall(in)	SolarRadiation(MJ/m2)	Holiday	FunctioningDay
+0	mb_382	2023-09-16 20:59:58.095000	73	70	5.6	9.8	65.7	0.0	0.0	0.00	No	Yes
+1	mb_547	2023-09-23 17:59:57.270000	63	39	2.2	2.5	39.0	0.0	0.0	0.21	No	Yes
+2	mb_578	2023-09-25 00:59:57.115000	69	54	0.2	8.6	48.6	0.0	0.0	0.00	No	Yes
+3	mb_187	2023-09-08 17:59:59.070000	69	43	4.0	6.2	46.9	0.0	0.0	0.26	Yes	Yes
+4	mb_227	2023-09-10 09:59:58.870000	75	73	6.9	12.3	64.2	0.0	0.0	2.28	No	Yes
+1.1  Handling Missing Values
+Objective: Prioritize data integrity and model reliability by:
+Identifying and imputing missing values in critical columns using median values, chosen for their resistance to outliers.
+Significance: Imputing missing values is essential for preventing potential biases or inaccuracies in the predictive models, thereby maintaining the dataset's quality.
+
+# Handling missing values directly after loading the data
+# Filling missing values with median for specific columns
+df_train['Visibility(miles)'].fillna(df_train['Visibility(miles)'].median(), inplace=True)
+df_train['DewPointTemperature(F)'].fillna(df_train['DewPointTemperature(F)'].median(), inplace=True)
+df_train['SolarRadiation(MJ/m2)'].fillna(df_train['SolarRadiation(MJ/m2)'].median(), inplace=True)
+​
+# Applying the same imputation for the test dataset
+df_test['Visibility(miles)'].fillna(df_test['Visibility(miles)'].median(), inplace=True)
+df_test['DewPointTemperature(F)'].fillna(df_test['DewPointTemperature(F)'].median(), inplace=True)
+df_test['SolarRadiation(MJ/m2)'].fillna(df_test['SolarRadiation(MJ/m2)'].median(), inplace=True)
+​
+1.2  Exploratory Data Analysis (EDA) and Data Preprocessing
+Objective: Gain comprehensive insights into the dataset through:
+Generating descriptive statistics for both numerical and categorical features to understand central tendencies, dispersion, and distribution.
+Employing histograms and boxplots to visualize distributions and detect outliers, respectively.
+Creating a correlation heatmap to explore the relationships between various features and the target variable, RENTALS.
+Significance: EDA is pivotal for uncovering underlying patterns, trends, and anomalies in the dataset, which informs data preprocessing and modeling strategies.
+
+# Setting visualization style
+sns.set(style="whitegrid")
+​
+# Descriptive statistics for numerical features
+df_train.describe()
+​
+Temperature(F)	Humidity(%)	Wind speed (mph)	Visibility(miles)	DewPointTemperature(F)	Rainfall(in)	Snowfall(in)	SolarRadiation(MJ/m2)	RENTALS
+count	1638.000000	1638.000000	1638.000000	1638.000000	1638.000000	1638.000000	1638.000000	1638.000000	1638.000000
+mean	57.341880	59.029915	3.360989	9.675336	41.850488	0.004676	0.001770	0.512503	828.153846
+std	12.923783	18.563032	2.081436	3.464284	13.816064	0.036412	0.017906	0.793729	657.599846
+min	26.000000	13.000000	0.000000	0.000000	-2.200000	0.000000	0.000000	0.000000	0.000000
+25%	47.000000	44.000000	1.800000	7.500000	33.400000	0.000000	0.000000	0.000000	241.500000
+50%	57.000000	59.000000	2.900000	11.600000	41.900000	0.000000	0.000000	0.000000	761.500000
+75%	67.750000	73.000000	4.500000	12.400000	50.900000	0.000000	0.000000	0.880000	1203.750000
+max	91.000000	97.000000	12.800000	12.400000	71.600000	0.710000	0.300000	3.180000	3303.000000
+
+# Descriptive statistics for categorical features
+df_train.describe(include='object')
+​
+ID	DateHour	Holiday	FunctioningDay
+count	1638	1638	1638	1638
+unique	1638	1638	2	2
+top	mb_1039	2023-10-14 05:59:54.810000	No	Yes
+freq	1	1	1552	1455
+
+# Checking for missing values again to confirm imputation
+df_train.isnull().sum()
+​
+ID                        0
+DateHour                  0
+Temperature(F)            0
+Humidity(%)               0
+Wind speed (mph)          0
+Visibility(miles)         0
+DewPointTemperature(F)    0
+Rainfall(in)              0
+Snowfall(in)              0
+SolarRadiation(MJ/m2)     0
+Holiday                   0
+FunctioningDay            0
+RENTALS                   0
+dtype: int64
+
+# Histograms for numerical features
+df_train.hist(bins=15, figsize=(15, 10), layout=(4, 4))
+plt.show()
+​
+
+
+# Boxplots for numerical features to identify outliers
+numerical_features = ['Temperature(F)', 'Humidity(%)', 'Wind speed (mph)', 'Visibility(miles)', 'DewPointTemperature(F)', 'Rainfall(in)', 'Snowfall(in)', 'SolarRadiation(MJ/m2)']
+​
+# Setting up the figure size and grid layout
+plt.figure(figsize=(16, 16))
+​
+# Looping through the numerical features to create boxplots
+for index, col in enumerate(numerical_features, 1):
+    plt.subplot(4, 4, index)  # (rows, columns, index) for subplot
+    sns.boxplot(x=df_train[col])
+    plt.title(f'Boxplot of {col}')
+​
+plt.tight_layout()
+plt.show()
+
+
+# Correlation heatmap
+plt.figure(figsize=(10, 8))
+correlation_matrix = df_train[numerical_features + ['RENTALS']].corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+plt.show()
+​
+
+1.3  Data Preparation for Modeling
+Categorical Variable Encoding: To ensure that the models can interpret the categorical variables 'Holiday' and 'FunctioningDay', one-hot encoding is applied. This technique transforms these categorical variables into a format that can be provided to machine learning algorithms to improve prediction accuracy. The drop_first=True parameter is used to avoid the dummy variable trap by dropping one category and thus reducing collinearity.
+Feature Selection: The columns 'DateHour' and 'ID' are dropped from the dataset. 'DateHour' is removed because time-specific information has already been extracted and encoded as separate features during the feature engineering process. The 'ID' column is dropped as it does not contribute to the predictive power of the model being merely an identifier.
+Dataset Splitting: The dataset is divided into features (X_train, X_test) and the target variable (y_train). This separation is crucial for training the models on known outcomes (y_train) and then making predictions on new, unseen data (X_test).
+Final Shape Confirmation: The shapes of the final training and testing feature sets, as well as the training target set, are displayed to confirm the dimensions of the data being used for model training and evaluation. This step ensures that the data is correctly structured for the subsequent modeling phase.
+
+​
+# Encoding categorical variables (if any) - Example with 'Holiday' and 'FunctioningDay'
+df_train = pd.get_dummies(df_train, columns=['Holiday', 'FunctioningDay'], drop_first=True)
+df_test = pd.get_dummies(df_test, columns=['Holiday', 'FunctioningDay'], drop_first=True)
+​
+# Preparing the data for modeling
+# Dropping 'DateHour' and 'ID' for simplicity
+X_train = df_train.drop(['RENTALS', 'DateHour', 'ID'], axis=1)
+y_train = df_train['RENTALS']
+X_test = df_test.drop(['DateHour', 'ID'], axis=1)
+​
+# Checking the final shape of datasets
+print(f'Training Features Shape: {X_train.shape}')
+print(f'Training Target Shape: {y_train.shape}')
+print(f'Test Features Shape: {X_test.shape}')
+Training Features Shape: (1638, 10)
+Training Target Shape: (1638,)
+Test Features Shape: (546, 10)
+1.4  Feature Engineering
+Objective: Enhance the predictive capability of the models by:
+Extracting meaningful time components (day of the week, hour, month) from the DateHour column.
+Categorizing temperature into discrete ranges (Cold, Mild, Warm, Hot) and creating a binary feature for peak hours.
+Implementing one-hot encoding for categorical variables to facilitate their use in modeling.
+Significance: Feature engineering is instrumental in transforming raw data into a format more suitable for modeling, potentially uncovering hidden relationships that improve model performance.
+
+# Feature Engineering
+​
+# 1. Extracting Date Features
+df_train['DateHour'] = pd.to_datetime(df_train['DateHour'])
+df_test['DateHour'] = pd.to_datetime(df_test['DateHour'])
+​
+# Extracting day of week, hour, and month as they might influence rentals
+df_train['DayOfWeek'] = df_train['DateHour'].dt.dayofweek
+df_train['Hour'] = df_train['DateHour'].dt.hour
+df_train['Month'] = df_train['DateHour'].dt.month
+​
+df_test['DayOfWeek'] = df_test['DateHour'].dt.dayofweek
+df_test['Hour'] = df_test['DateHour'].dt.hour
+df_test['Month'] = df_test['DateHour'].dt.month
+​
+# 2. Binning Temperature into categories (Cold, Mild, Warm, Hot)
+bins = [0, 50, 65, 80, 100]
+labels = ['Cold', 'Mild', 'Warm', 'Hot']
+df_train['TempCategory'] = pd.cut(df_train['Temperature(F)'], bins=bins, labels=labels, include_lowest=True)
+df_test['TempCategory'] = pd.cut(df_test['Temperature(F)'], bins=bins, labels=labels, include_lowest=True)
+​
+# One-hot encoding the 'TempCategory' feature
+df_train = pd.get_dummies(df_train, columns=['TempCategory'])
+df_test = pd.get_dummies(df_test, columns=['TempCategory'])
+​
+# 3. Creating a binary feature for peak hours
+df_train['PeakHour'] = df_train['Hour'].apply(lambda x: 1 if x in [7, 8, 9, 16, 17, 18] else 0)
+df_test['PeakHour'] = df_test['Hour'].apply(lambda x: 1 if x in [7, 8, 9, 16, 17, 18] else 0)
+​
+# Dropping the original 'DateHour' column as it's no longer needed
+df_train.drop(['DateHour'], axis=1, inplace=True)
+df_test.drop(['DateHour'], axis=1, inplace=True)
+​
+# Final preparation before modeling
+X_train = df_train.drop(['RENTALS', 'ID'], axis=1)
+y_train = df_train['RENTALS']
+X_test = df_test.drop(['ID'], axis=1)
+​
+​
+
+# Checking the shape after feature engineering
+print(f'Final Training Features Shape: {X_train.shape}')
+print(f'Final Training Target Shape: {y_train.shape}')
+print(f'Final Test Features Shape: {X_test.shape}')
+Final Training Features Shape: (1638, 18)
+Final Training Target Shape: (1638,)
+Final Test Features Shape: (546, 18)
+1.5  Model Preparation and Training
+Objective: Establish a robust modeling framework by:
+Splitting the dataset into training and validation sets to evaluate the models on unseen data.
+Training multiple models (OLS Linear Regression, Lasso Regression, K-Nearest Neighbors, Decision Tree Regressor) to explore both linear and non-linear relationships.
+Significance: This diversified approach to modeling allows for a comprehensive evaluation of different algorithms, ensuring the selection of the most effective model based on performance metrics.
+
+# Preparing the data for modeling
+X = X_train
+y = y_train
+​
+# Splitting the dataset into training and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+​
+# OLS Linear Regression
+ols = LinearRegression()
+ols.fit(X_train, y_train)
+y_pred_ols = ols.predict(X_val)
+print('OLS Linear Regression R^2 Score:', r2_score(y_val, y_pred_ols))
+​
+# Lasso Regression
+lasso = Lasso(alpha=0.1)
+lasso.fit(X_train, y_train)
+y_pred_lasso = lasso.predict(X_val)
+print('Lasso Regression R^2 Score:', r2_score(y_val, y_pred_lasso))
+​
+# K-Nearest Neighbors
+knn = KNeighborsRegressor(n_neighbors=5)
+knn.fit(X_train, y_train)
+y_pred_knn = knn.predict(X_val)
+print('K-Nearest Neighbors R^2 Score:', r2_score(y_val, y_pred_knn))
+​
+# Decision Tree Regressor
+dt = DecisionTreeRegressor(max_depth=5)
+dt.fit(X_train, y_train)
+y_pred_dt = dt.predict(X_val)
+print('Decision Tree Regressor R^2 Score:', r2_score(y_val, y_pred_dt))
+​
+OLS Linear Regression R^2 Score: 0.5911035716503328
+Lasso Regression R^2 Score: 0.5910004702248361
+K-Nearest Neighbors R^2 Score: 0.29657603789046316
+Decision Tree Regressor R^2 Score: 0.6584312614684511
+1.6  Hyperparameter Tuning and Model Evaluation
+Objective: Optimize model performance through:
+Utilizing GridSearchCV to fine-tune the Decision Tree Regressor's hyperparameters systematically.
+Evaluating the tuned model on both validation and test datasets to assess its generalization capability.
+Significance: Hyperparameter tuning is critical for enhancing model accuracy, while evaluation on unseen data provides a realistic assessment of the model's predictive power.
+
+# Re-defining the training dataset for clarity
+X_train_full, y_train_full = X, y
+​
+# Decision Tree Regressor with GridSearchCV for hyperparameter tuning
+param_grid = {
+    'max_depth': [10, 12, 14, 16, 18, 20],
+    'min_samples_split': [8, 10, 12, 14, 16],
+    'min_samples_leaf': [1, 2, 3, 4, 5]
+}
+​
+# Initialize the Decision Tree Regressor with a random state for reproducibility
+dt = DecisionTreeRegressor(random_state=42)
+​
+# Initialize the GridSearchCV with the parameter grid
+grid_search = GridSearchCV(estimator=dt, param_grid=param_grid, cv=5, n_jobs=-1, scoring='r2')
+​
+# Fit GridSearchCV
+grid_search.fit(X_train_full, y_train_full)
+​
+# Printing the best parameters and the improved score
+print("Best R^2 Score:", grid_search.best_score_)
+​
+# Extracting the best estimator
+best_dt = grid_search.best_estimator_
+​
+# Making predictions on the test set
+predictions = best_dt.predict(X_test)
+​
+# Ensuring there are no zero predictions - Replacing zeros with the smallest non-zero prediction
+# Dynamically adjusting predictions
+min_positive_prediction = predictions[predictions > 0].min()
+predictions = np.where(predictions <= 0, min_positive_prediction, predictions)
+​
+Best R^2 Score: 0.7650127900068
+1.7  Kaggle Submission Preparation
+Objective: Translate analytical findings into actionable insights by:
+Preparing a submission file for Kaggle, comprising predictions made by the optimized model.
+Ensuring the submission aligns with Kaggle's required format, facilitating benchmarking against other models in the competition.
+Significance: The Kaggle submission not only benchmarks the model's performance in a competitive environment but also serves as a practical demonstration of the model's applicability to real-world challenges.
+
+# Creating the Kaggle submission file
+submission = pd.DataFrame({
+    "ID": df_test['ID'],
+    "RENTALS": predictions
+})
+​
+# Saving the submission file
+submission.to_csv("decision_tree_submission.csv", index=False)
+​
+print("Submission file 'decision_tree_submission.csv' created.")
+Submission file 'decision_tree_submission.csv' created.
+2  Conclusion
+Key Findings: The exploratory data analysis revealed significant insights into how various factors, such as weather conditions, time of day, and seasonality, impact bike rental patterns. Feature engineering further enhanced the dataset, providing the models with additional context for more accurate predictions.
+Model Performance: Among the evaluated models, the Decision Tree Regressor, post hyperparameter tuning, demonstrated superior performance in terms of R^2 score, indicating its robustness in capturing the complexities of bike rental demand.
+Implications: The findings underscore the potential of machine learning to predict bike-sharing demand accurately, offering a valuable tool for urban planners and bike-sharing operators to optimize resources, improve service delivery, and enhance user satisfaction.
+Future Directions: While the current model provides a solid foundation, future work could explore more advanced techniques, such as ensemble methods and time series forecasting, to further refine predictions. Additionally, incorporating real-time data and user feedback could dynamically adapt the model to changing conditions and preferences.
+
