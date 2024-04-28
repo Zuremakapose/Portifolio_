@@ -1,0 +1,83 @@
+# Portifolio_
+zuremakapose.github.io/portifolio 
+
+ I’m currently Master’s candidate in Business Analytics
+ I’m looking to collaborate on innovative solutions and strategic insights to the global business landscape, I am committed to continuous learning
+📫 How to reach me www.linkedin.com/in/zurema-kapose-
+
+
+ ##Education : Hult International Business School
+ International Business Management 
+ Master’s in Business Analytics
+
+#Projects 
+
+ Passion Project Text Adventure Game Project 3
+
+ GAME DESCRIPTION
+
+Dive into the spinning fun with our IPython Notebook-based "Wheel of Fortune" game! Across three thrilling rounds, players take turns to spin the digital wheel, guessing letters to reveal hidden words. With each correct guess, underscores flip to unveil letters, edging you closer to victory. Strategize and solve diverse puzzles, banking virtual cash as you uncover each word. Whether you're a wordsmith or a casual player, this game promises to challenge your vocabulary and puzzle-solving skills. Get ready to spin, guess, and win in this engaging and interactive word game experience!
+
+import random
+import time
+def win(guesses):
+    print(f"you have won the game with only {guesses} wrong guesses")
+
+def fail(guesses):
+    print(f"you have failed the game with {guesses} wrong guesses")
+
+try:
+    with open("countries.txt", "r") as f:  # this opens the file for us so we can select three countries
+        countries = [i.lower() for i in f.read().split("\n")] # list comprehension to remove uppercase
+except FileNotFoundError as e:
+    print("you cannot play the game without countries.txt!")
+    time.sleep(2)
+    quit()
+
+game_countries = random.sample(countries, 3)  # selects three countries and puts them in a list
+wrong_guesses = 0 # if user under 20 wrong guesses they win else they fail
+
+
+while game_countries: # this will run as long as there are countries in the above list
+    game_country = game_countries.pop()  # this pops the last country out for us!
+    game_display = ["_"] * len(game_country)  # here we need mathcing underscores for each country so we multply list by len
+    
+    print(f"Here is the answer: {game_country}\n")  # delete this when you want to actually play the game with a challenge!
+
+    
+    if " " in game_country:  # this checks for a space so display looks better
+        for index, value in enumerate(game_country):  # here we eneumerate to locate the space
+            if value == " ":
+                game_display[index] = " " # here we flip the space to an actual space in the display
+    print(f"Round: {3 - len(game_countries)}")  # here we simple subtract num of rounds by len(game_countries) for round
+    print("="*15)
+    
+    
+    while "_" in game_display:  # this loop will only run while there are underscores in the display
+        print(*game_display)  # the asterisk unpacks the display list
+        guess = input("please guess a letter!\n>>>: ")
+        if guess in game_country:  # same as above for flipping space
+            print("correct guess!")
+            for index, value in enumerate(game_country):
+                if value == guess:
+                    game_display[index] = value  # we nned to flip the value this time (above we flipped thew space!)
+        else:
+            wrong_guesses += 1
+            print("wrong guess!")
+            
+if wrong_guesses < 20:
+    win(wrong_guesses)  # calling the win function and passing in amount of guesses as arg!
+else:
+    fail(wrong_guesses)
+            
+                      
+                      
+        
+        
+
+    
+Here is the answer: gambia
+
+Round: 1
+===============
+_ _ _ _ _ _
